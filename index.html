@@ -63,6 +63,8 @@
         .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        .acciones-btns { display: flex; gap: 5px; }
+        .btn-editar { background: #f39c12; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
         .btn-eliminar { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
         .admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab-btn { padding: 10px 20px; background: #f0f0f0; border: none; border-radius: 5px; cursor: pointer; }
@@ -155,13 +157,15 @@
                     <button class="tab-btn" onclick="abrirTab('ventas')">📊 Ventas</button>
                 </div>
                 <div id="tabProductos" class="tab-panel activo">
-                    <h3>➕ Agregar Producto</h3>
+                    <h3 id="formTitulo">➕ Agregar Producto</h3>
                     <form id="productoForm">
+                        <input type="hidden" id="editandoId" value="">
                         <div class="form-group"><label>Código de Barras</label><input type="text" id="codigo" required></div>
                         <div class="form-group"><label>Nombre</label><input type="text" id="nombre" required></div>
                         <div class="form-group"><label>Precio (Gs)</label><input type="text" id="precio" placeholder="Ej: 8.500" oninput="formatarInputMoneda(this)" required></div>
                         <div class="form-group"><label>Stock</label><input type="text" id="stock" placeholder="Ej: 45" oninput="formatarInputNumero(this)" required></div>
-                        <button type="submit" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">💾 Guardar Producto</button>
+                        <button type="submit" id="btnGuardar" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">💾 Guardar Producto</button>
+                        <button type="button" id="btnCancelarEdicao" onclick="cancelarEdicao()" style="background:#7f8c8d; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; display:none; margin-left: 10px;">❌ Cancelar</button>
                     </form>
                     <hr style="margin:20px 0">
                     <h3>📋 Lista de Productos</h3>
@@ -437,7 +441,6 @@
             ventas.push({ fecha: new Date(), total: total, pago: formaPago });
             salvarDados();
             
-            // Nota fiscal gerada SEM o RUC (conforme solicitado)
             let comprobante = '═'.repeat(40) + '\n';
             comprobante += '        🏪 MULTI COMPRAS\n';
             comprobante += '═'.repeat(40) + '\n';
@@ -483,6 +486,7 @@
         
         function cerrarAdmin() {
             document.getElementById('adminModal').style.display = 'none';
+            cancelarEdicao();
         }
         
         function verificarSenha() {
@@ -500,7 +504,12 @@
             tbody.innerHTML = productos.map(p => `
                 <tr>
                     <td>${p.codigo}</td><td>${p.nombre}</td><td>Gs ${formatarGs(p.precio)}</td><td>${formatarGs(p.stock)}</td>
-                    <td><button class="btn-eliminar" onclick="eliminarProducto(${p.id})">🗑️</button></td>
+                    <td>
+                        <div class="acciones-btns">
+                            <button class="btn-editar" onclick="prepararEdicao(${p.id})">✏️</button>
+                            <button class="btn-eliminar" onclick="eliminarProducto(${p.id})">🗑️</button>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
             
@@ -520,27 +529,67 @@
                 actualizarAdmin();
             }
         }
+
+        function prepararEdicao(id) {
+            const prod = productos.find(p => p.id === id);
+            if(!prod) return;
+
+            document.getElementById('editandoId').value = prod.id;
+            document.getElementById('codigo').value = prod.codigo;
+            document.getElementById('nombre').value = prod.nombre;
+            document.getElementById('precio').value = formatarGs(prod.precio);
+            document.getElementById('stock').value = formatarGs(prod.stock);
+
+            document.getElementById('formTitulo').innerText = '✏️ Editar Producto';
+            document.getElementById('btnGuardar').innerText = '💾 Actualizar Producto';
+            document.getElementById('btnCancelarEdicao').style.display = 'inline-block';
+            
+            // Rola o modal para o topo para facilitar a edição
+            document.querySelector('.modal-content').scrollTop = 0;
+        }
+
+        function cancelarEdicao() {
+            document.getElementById('editandoId').value = '';
+            document.getElementById('productoForm').reset();
+            document.getElementById('formTitulo').innerText = '➕ Agregar Producto';
+            document.getElementById('btnGuardar').innerText = '💾 Guardar Producto';
+            document.getElementById('btnCancelarEdicao').style.display = 'none';
+        }
         
         document.getElementById('productoForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const nuevoId = Date.now();
+            const editandoId = document.getElementById('editandoId').value;
             const codigo = document.getElementById('codigo').value.trim();
             const nombre = document.getElementById('nombre').value.trim();
             const precio = parseGs(document.getElementById('precio').value);
             const stock = parseGs(document.getElementById('stock').value);
 
-            productos.push({
-                id: nuevoId,
-                codigo: codigo,
-                nombre: nombre,
-                precio: precio,
-                stock: stock
-            });
+            if (editandoId) {
+                // Modo Edição
+                const prod = productos.find(p => p.id == editandoId);
+                if (prod) {
+                    prod.codigo = codigo;
+                    prod.nombre = nombre;
+                    prod.precio = precio;
+                    prod.stock = stock;
+                }
+                alert('✅ ¡Producto actualizado correctamente!');
+            } else {
+                // Modo Novo Cadastro
+                const nuevoId = Date.now();
+                productos.push({
+                    id: nuevoId,
+                    codigo: codigo,
+                    nombre: nombre,
+                    precio: precio,
+                    stock: stock
+                });
+                alert('✅ ¡Producto guardado correctamente!');
+            }
 
             salvarDados();
-            alert('✅ ¡Producto guardado correctamente!');
-            this.reset();
+            cancelarEdicao();
             renderizarProductos();
             actualizarAdmin();
         });
