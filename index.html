@@ -234,8 +234,18 @@
         // ========== RUC CONFIGURÁVEL ==========
         const RUC_EMPRESA = "R.U.C: CID: 6337904";
 
-        // ========== DATOS LOCAIS COM PERSISTÊNCIA (localStorage) ==========
-        let productos = JSON.parse(localStorage.getItem('multicompras_productos')) || [
+        // ========== GERENCIAMENTO DE DADOS COM CONTROLE DE VERSÃO ==========
+        const DB_VERSION = "v2_2026"; // Mude este código se quiser forçar limpeza futura
+        const versaoSalva = localStorage.getItem('multicompras_db_version');
+
+        let productos;
+        if (versaoSalva !== DB_VERSION) {
+            // Se a versão mudou, reseta o localStorage do celular para puxar os produtos limpos
+            localStorage.removeItem('multicompras_productos');
+            localStorage.setItem('multicompras_db_version', DB_VERSION);
+        }
+
+        productos = JSON.parse(localStorage.getItem('multicompras_productos')) || [
             { id: 1, codigo: "789100001", nombre: "Arroz 1kg", precio: 8500, stock: 50 },
             { id: 2, codigo: "789100002", nombre: "Feijão 1kg", precio: 7900, stock: 40 },
             { id: 3, codigo: "789100003", nombre: "Açúcar 1kg", precio: 4500, stock: 60 },
@@ -243,7 +253,7 @@
             { id: 5, codigo: "789100005", nombre: "Leche 1L", precio: 5200, stock: 45 },
             { id: 6, codigo: "789100006", nombre: "Aceite 900ml", precio: 6800, stock: 35 },
             { id: 7, codigo: "789100007", nombre: "Fideos 500g", precio: 3900, stock: 55 },
-            { id: 8, codigo: "789100008", nombre: "Jabón 800g", precio: 9500, stock: 25 }
+            { id: 8, codigo: "789100008", nombre: "Jabón 800g", perox: 9500, stock: 25 }
         ];
         
         let ventas = JSON.parse(localStorage.getItem('multicompras_ventas')) || [];
@@ -296,10 +306,8 @@
         }
 
         function encontrarEAdicionarPorCodigo(codigoLido) {
-            // Limpa qualquer caractere não numérico da leitura
             const limpoLido = codigoLido.replace(/\D/g, '');
             
-            // Tenta encontrar o produto comparando apenas os números limpos
             let prod = productos.find(p => {
                 const limpoCadastrado = p.codigo.replace(/\D/g, '');
                 return limpoCadastrado === limpoLido || 
@@ -451,7 +459,6 @@
             ventas.push({ fecha: new Date(), total: total, pago: formaPago });
             salvarDados();
             
-            // Nota fiscal gerada SEM o RUC (conforme solicitado anteriormente)
             let comprobante = '═'.repeat(40) + '\n';
             comprobante += '        🏪 MULTI COMPRAS\n';
             comprobante += '═'.repeat(40) + '\n';
