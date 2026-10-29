@@ -186,7 +186,7 @@
     </div>
 
     <script>
-        // ========== FORMATAÇÃO DE GUARANi (Sem centavos, com pontos nos milhares) ==========
+        // ========== FORMATAÇÃO DE GUARANÍ (Sem centavos, com pontos nos milhares) ==========
         function formatarGs(valor) {
             const numero = Math.round(Number(valor) || 0);
             return numero.toLocaleString('es-PY');
@@ -437,9 +437,9 @@
             ventas.push({ fecha: new Date(), total: total, pago: formaPago });
             salvarDados();
             
+            // Nota fiscal gerada SEM o RUC (conforme solicitado)
             let comprobante = '═'.repeat(40) + '\n';
             comprobante += '        🏪 MULTI COMPRAS\n';
-            comprobante += `       ${RUC_EMPRESA}\n`;
             comprobante += '═'.repeat(40) + '\n';
             comprobante += `Fecha: ${new Date().toLocaleString()}\n`;
             comprobante += '═'.repeat(40) + '\n';
