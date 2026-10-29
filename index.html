@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Multi Compras - PDV</title>
+    <!-- Biblioteca para Leitor de Código de Barras por Câmera -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #1a1a2e; padding: 20px; }
@@ -28,10 +30,14 @@
         .productos-section, .carrito-section { background: white; border-radius: 10px; padding: 20px; }
         .section-title { margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
         
-        .busqueda { display: flex; gap: 10px; margin-bottom: 20px; }
-        .busqueda input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
-        .busqueda button { padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .busqueda { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .busqueda input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; min-width: 200px; }
+        .busqueda button { padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-camara { background: #e67e22 !important; }
         
+        /* Estilo do leitor de câmera */
+        #reader { width: 100%; max-width: 400px; margin: 0 auto 15px auto; display: none; border-radius: 8px; overflow: hidden; border: 2px solid #3498db; }
+
         .productos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; }
         .producto-card { background: #f5f5f5; border-radius: 8px; padding: 10px; cursor: pointer; text-align: center; border: 2px solid transparent; transition: all 0.2s; }
         .producto-card:hover { background: #e0e0e0; border-color: #3498db; }
@@ -96,7 +102,12 @@
                 <div class="busqueda">
                     <input type="text" id="buscaInput" placeholder="🔍 Código o nombre" onkeyup="buscarProducto()">
                     <button onclick="buscarProducto()">Buscar</button>
+                    <button class="btn-camara" onclick="toggleCamara()">📷 Escanear</button>
                 </div>
+
+                <!-- Visor da Câmera para leitura -->
+                <div id="reader"></div>
+
                 <div class="productos-grid" id="productosGrid"></div>
             </div>
 
@@ -209,12 +220,62 @@
 
         let carrito = [];
         let cajaAbierta = false;
+        let html5QrCode = null;
+        let cameraAtiva = false;
         
         document.getElementById('rucTexto').innerText = RUC_EMPRESA;
 
         function salvarDados() {
             localStorage.setItem('multicompras_productos', JSON.stringify(productos));
             localStorage.setItem('multicompras_ventas', JSON.stringify(ventas));
+        }
+
+        // ========== LEITOR POR CÂMERA ==========
+        function toggleCamara() {
+            const readerDiv = document.getElementById('reader');
+            if (!cameraAtiva) {
+                readerDiv.style.display = 'block';
+                cameraAtiva = true;
+                html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    { fps: 10, qrbox: { width: 250, height: 150 } },
+                    (decodedText, decodedResult) => {
+                        // Código lido com sucesso pela câmera
+                        encontrarEAdicionarPorCodigo(decodedText);
+                        toggleCamara(); // Fecha a câmera após a leitura
+                    },
+                    (errorMessage) => {
+                        // Erros de leitura quadro a quadro são ignorados para manter fluido
+                    }
+                ).catch((err) => {
+                    alert("No se pudo iniciar la cámara. Verifique los permisos.");
+                    readerDiv.style.display = 'none';
+                    cameraAtiva = false;
+                });
+            } else {
+                if (html5QrCode) {
+                    html5QrCode.stop().then(() => {
+                        readerDiv.style.display = 'none';
+                        cameraAtiva = false;
+                    }).catch(err => {
+                        readerDiv.style.display = 'none';
+                        cameraAtiva = false;
+                    });
+                } else {
+                    readerDiv.style.display = 'none';
+                    cameraAtiva = false;
+                }
+            }
+        }
+
+        function encontrarEAdicionarPorCodigo(codigo) {
+            const prod = productos.find(p => p.codigo === codigo);
+            if (prod) {
+                agregarAlCarrito(prod.id);
+            } else {
+                alert(`⚠️ Producto con código "${codigo}" no encontrado.`);
+            }
         }
 
         // ========== FUNCIONES CAJA ==========
@@ -300,7 +361,7 @@
                 efectivoDiv.style.display = 'block';
             } else {
                 efectivoDiv.style.display = 'none';
-                document.getElementById('recibido.value') = '';
+                document.getElementById('recibido').value = '';
                 document.getElementById('vueltoValor').innerHTML = 'Gs 0.00';
             }
         }
