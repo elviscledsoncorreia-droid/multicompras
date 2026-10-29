@@ -170,8 +170,8 @@
     </div>
 
     <script>
-        // ========== DATOS LOCALES ==========
-        let productos = [
+        // ========== DATOS LOCAIS COM PERSISTÊNCIA (localStorage) ==========
+        let productos = JSON.parse(localStorage.getItem('multicompras_productos')) || [
             { id: 1, codigo: "789100001", nombre: "Arroz 1kg", precio: 8500, stock: 50 },
             { id: 2, codigo: "789100002", nombre: "Feijão 1kg", precio: 7900, stock: 40 },
             { id: 3, codigo: "789100003", nombre: "Açúcar 1kg", precio: 4500, stock: 60 },
@@ -182,10 +182,18 @@
             { id: 8, codigo: "789100008", nombre: "Jabón 800g", precio: 9500, stock: 25 }
         ];
         
+        let ventas = JSON.parse(localStorage.getItem('multicompras_ventas')) || [];
+        // Converte as datas de string de volta para objeto Date
+        ventas.forEach(v => v.fecha = new Date(v.fecha));
+
         let carrito = [];
-        let ventas = [];
         let cajaAbierta = false;
         
+        function salvarDados() {
+            localStorage.setItem('multicompras_productos', JSON.stringify(productos));
+            localStorage.setItem('multicompras_ventas', JSON.stringify(ventas));
+        }
+
         // ========== FUNCIONES CAJA ==========
         function abrirCaja() {
             cajaAbierta = true;
@@ -198,7 +206,7 @@
         
         function cerrarCaja() {
             const total = ventas.reduce((s, v) => s + v.total, 0);
-            alert(`🔒 Cierre de caja\nVentas: ${ventas.length}\nTotal: Gs ${total.toFixed(2)}`);
+            alert(`🔒 Cierre de caja\nVentas registradas: ${ventas.length}\nTotal acumulado: Gs ${total.toFixed(2)}`);
             cajaAbierta = false;
             document.getElementById('cajaStatus').innerHTML = '🔒 CAJA CERRADA';
             document.getElementById('cajaStatus').className = 'caja-status';
@@ -315,6 +323,7 @@
             }
             
             ventas.push({ fecha: new Date(), total: total, pago: formaPago });
+            salvarDados(); // Salva o estoque atualizado e a venda no navegador
             
             let comprobante = '═'.repeat(40) + '\n';
             comprobante += '        🏪 MULTI COMPRAS\n';
@@ -384,7 +393,7 @@
             const tbodyVentas = document.getElementById('listaVentasAdmin');
             tbodyVentas.innerHTML = ventas.map(v => `
                 <tr>
-                    <td>${v.fecha.toLocaleString()}</td><td>Gs ${v.total.toFixed(2)}</td><td>${v.pago}</td>
+                    <td>${new Date(v.fecha).toLocaleString()}</td><td>Gs ${v.total.toFixed(2)}</td><td>${v.pago}</td>
                 </tr>
             `).join('');
         }
@@ -392,6 +401,7 @@
         function eliminarProducto(id) {
             if(confirm('¿Eliminar este producto?')) {
                 productos = productos.filter(p => p.id !== id);
+                salvarDados();
                 renderizarProductos();
                 actualizarAdmin();
             }
@@ -399,7 +409,7 @@
         
         document.getElementById('productoForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const nuevoId = productos.length + 1;
+            const nuevoId = Date.now(); // ID único baseado em tempo para evitar duplicados
             productos.push({
                 id: nuevoId,
                 codigo: document.getElementById('codigo').value,
@@ -407,6 +417,7 @@
                 precio: parseFloat(document.getElementById('precio').value),
                 stock: parseInt(document.getElementById('stock').value)
             });
+            salvarDados(); // Salva o novo produto no navegador imediatamente
             alert('Producto guardado');
             this.reset();
             renderizarProductos();
