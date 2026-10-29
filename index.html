@@ -163,8 +163,8 @@
                     <form id="productoForm">
                         <input type="hidden" id="editandoId" value="">
                         <div class="form-group"><label>Código de Barras</label><input type="text" id="codigo_barras" required></div>
-                        <div class="form-group"><label>Nombre</label><input type="text" id="nombre" required></div>
-                        <div class="form-group"><label>Precio (Gs)</label><input type="text" id="precio" placeholder="Ej: 8.500" oninput="formatarInputMoneda(this)" required></div>
+                        <div class="form-group"><label>Nombre</label><input type="text" id="nome" required></div>
+                        <div class="form-group"><label>Precio (Gs)</label><input type="text" id="preco" placeholder="Ej: 8.500" oninput="formatarInputMoneda(this)" required></div>
                         <div class="form-group"><label>Stock / Cantidad</label><input type="text" id="quantidade" placeholder="Ej: 45" oninput="formatarInputNumero(this)" required></div>
                         <div class="form-group"><label>Categoría</label><input type="text" id="categoria" placeholder="Ej: Alimentación"></div>
                         <button type="submit" id="btnGuardar" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">💾 Guardar Producto</button>
@@ -346,7 +346,7 @@
             if(datos.length === 0) { grid.innerHTML = '<p>No hay productos</p>'; return; }
             grid.innerHTML = datos.map(p => `
                 <div class="producto-card" onclick="agregarAlCarrito(${p.id})">
-                    <div><b>${p.nombre}</b></div>
+                    <div><b>${p.nome || ''}</b></div>
                     <div class="producto-precio">Gs ${formatarGs(p.preco)}</div>
                     <div>Stock: ${formatarGs(p.quantidade)}</div>
                 </div>
@@ -358,7 +358,7 @@
             if(!termo) { renderizarProductos(productos); return; }
             const filtrados = productos.filter(p => 
                 (p.codigo_barras && p.codigo_barras.toLowerCase().includes(termo)) || 
-                p.nombre.toLowerCase().includes(termo)
+                (p.nome && p.nome.toLowerCase().includes(termo))
             );
             renderizarProductos(filtrados);
         }
@@ -373,7 +373,7 @@
                 item.subtotal = item.cantidad * item.precio;
             } else {
                 if(producto.quantidade < 1) { alert('Sin stock'); return; }
-                carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.preco, cantidad: 1, subtotal: producto.preco });
+                carrito.push({ id: producto.id, nombre: producto.nome, precio: producto.preco, cantidad: 1, subtotal: producto.preco });
             }
             renderizarCarrito();
         }
@@ -523,7 +523,7 @@
             const tbody = document.getElementById('listaProductos');
             tbody.innerHTML = productos.map(p => `
                 <tr>
-                    <td>${p.codigo_barras || ''}</td><td>${p.nombre}</td><td>Gs ${formatarGs(p.preco)}</td><td>${formatarGs(p.quantidade)}</td>
+                    <td>${p.codigo_barras || ''}</td><td>${p.nome || ''}</td><td>Gs ${formatarGs(p.preco)}</td><td>${formatarGs(p.quantidade)}</td>
                     <td>
                         <div class="acciones-btns">
                             <button class="btn-editar" onclick="prepararEdicao(${p.id})">✏️</button>
@@ -558,15 +558,15 @@
 
             document.getElementById('editandoId').value = prod.id;
             document.getElementById('codigo_barras').value = prod.codigo_barras || '';
-            document.getElementById('nombre').value = prod.nombre;
-            document.getElementById('precio').value = formatarGs(prod.preco);
+            document.getElementById('nome').value = prod.nome || '';
+            document.getElementById('preco').value = formatarGs(prod.preco);
             document.getElementById('quantidade').value = formatarGs(prod.quantidade);
             document.getElementById('categoria').value = prod.categoria || '';
 
             document.getElementById('formTitulo').innerText = '✏️ Editar Producto';
             document.getElementById('btnGuardar').innerText = '💾 Actualizar Producto';
             document.getElementById('btnCancelarEdicao').style.display = 'inline-block';
-            document.querySelector('.modal-content').scrollTop = document.querySelector('.modal-content').scrollHeight;
+            document.querySelector('.modal-content').scrollTop = 0;
         }
 
         function cancelarEdicao() {
@@ -582,8 +582,8 @@
             
             const editandoId = document.getElementById('editandoId').value;
             const codigo_barras = document.getElementById('codigo_barras').value.trim();
-            const nombre = document.getElementById('nombre').value.trim();
-            const preco = parseGs(document.getElementById('precio').value);
+            const nome = document.getElementById('nome').value.trim();
+            const preco = parseGs(document.getElementById('preco').value);
             const quantidade = parseGs(document.getElementById('quantidade').value);
             const categoria = document.getElementById('categoria').value.trim();
 
@@ -591,7 +591,7 @@
                 // Atualizar produto existente no Supabase
                 const { error } = await supabaseClient
                     .from('produtos')
-                    .update({ codigo_barras, nombre, preco, quantidade, categoria })
+                    .update({ codigo_barras, nome, preco, quantidade, categoria })
                     .eq('id', editandoId);
 
                 if (error) {
@@ -600,10 +600,10 @@
                 }
                 alert('✅ ¡Producto actualizado correctamente!');
             } else {
-                // Inserir novo produto no Supabase com os nomes exatos das colunas
+                // Inserir novo produto no Supabase
                 const { error } = await supabaseClient
                     .from('produtos')
-                    .insert([{ codigo_barras, nombre, preco, quantidade, categoria }]);
+                    .insert([{ codigo_barras, nome, preco, quantidade, categoria }]);
 
                 if (error) {
                     alert('Erro ao salvar produto no Supabase.');
