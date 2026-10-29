@@ -109,7 +109,7 @@
                 </div>
                 <div class="pago-section">
                     <label>Forma de Pago</label>
-                    <select id="formaPago">
+                    <select id="formaPago" onchange="atualizarFormaPago()">
                         <option value="efectivo">💵 Efectivo</option>
                         <option value="tarjeta">💳 Tarjeta</option>
                         <option value="pix">📱 PIX</option>
@@ -289,8 +289,20 @@
             const total = carrito.reduce((s, i) => s + i.subtotal, 0);
             document.getElementById('subtotal').innerHTML = `Gs ${total.toFixed(2)}`;
             document.getElementById('totalCarrito').innerHTML = `Gs ${total.toFixed(2)}`;
+            
+            atualizarFormaPago();
+        }
+
+        function atualizarFormaPago() {
             const formaPago = document.getElementById('formaPago').value;
-            document.getElementById('efectivoDiv').style.display = formaPago === 'efectivo' ? 'block' : 'none';
+            const efectivoDiv = document.getElementById('efectivoDiv');
+            if(formaPago === 'efectivo') {
+                efectivoDiv.style.display = 'block';
+            } else {
+                efectivoDiv.style.display = 'none';
+                document.getElementById('recibido').value = '';
+                document.getElementById('vueltoBox').style.display = 'none';
+            }
         }
         
         function alterarQuantidade(idx, delta) {
@@ -308,12 +320,6 @@
             }
             renderizarCarrito();
         }
-        
-        document.getElementById('formaPago').addEventListener('change', function() {
-            document.getElementById('efectivoDiv').style.display = this.value === 'efectivo' ? 'block' : 'none';
-            document.getElementById('recibido').value = '';
-            document.getElementById('vueltoBox').style.display = 'none';
-        });
         
         document.getElementById('recibido').addEventListener('input', function() {
             const total = carrito.reduce((s, i) => s + i.subtotal, 0);
@@ -377,6 +383,8 @@
             alert(`✅ Venta finalizada! Total: Gs ${total.toFixed(2)}`);
             
             carrito = [];
+            document.getElementById('recibido').value = '';
+            document.getElementById('vueltoBox').style.display = 'none';
             renderizarCarrito();
             renderizarProductos();
             actualizarAdmin();
