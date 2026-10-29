@@ -35,7 +35,6 @@
         .busqueda button { padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .btn-camara { background: #e67e22 !important; }
         
-        /* Estilo do leitor de câmera */
         #reader { width: 100%; max-width: 400px; margin: 0 auto 15px auto; display: none; border-radius: 8px; overflow: hidden; border: 2px solid #3498db; }
 
         .productos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; }
@@ -105,7 +104,6 @@
                     <button class="btn-camara" onclick="toggleCamara()">📷 Escanear</button>
                 </div>
 
-                <!-- Visor da Câmera para leitura -->
                 <div id="reader"></div>
 
                 <div class="productos-grid" id="productosGrid"></div>
@@ -222,8 +220,6 @@
         let cajaAbierta = false;
         let html5QrCode = null;
         let cameraAtiva = false;
-        
-        document.getElementById('rucTexto').innerText = RUC_EMPRESA;
 
         function salvarDados() {
             localStorage.setItem('multicompras_productos', JSON.stringify(productos));
@@ -241,13 +237,10 @@
                     { facingMode: "environment" }, 
                     { fps: 10, qrbox: { width: 250, height: 150 } },
                     (decodedText, decodedResult) => {
-                        // Código lido com sucesso pela câmera
                         encontrarEAdicionarPorCodigo(decodedText);
-                        toggleCamara(); // Fecha a câmera após a leitura
+                        toggleCamara();
                     },
-                    (errorMessage) => {
-                        // Erros de leitura quadro a quadro são ignorados para manter fluido
-                    }
+                    (errorMessage) => {}
                 ).catch((err) => {
                     alert("No se pudo iniciar la cámara. Verifique los permisos.");
                     readerDiv.style.display = 'none';
@@ -315,7 +308,7 @@
         function buscarProducto() {
             const termo = document.getElementById('buscaInput').value.toLowerCase();
             if(!termo) { renderizarProductos(productos); return; }
-            const filtrados = productos.filter(p => p.codigo.includes(termo) || p.nombre.toLowerCase().includes(termo));
+            const filtrados = productos.filter(p => p.codigo.toLowerCase().includes(termo) || p.nombre.toLowerCase().includes(termo));
             renderizarProductos(filtrados);
         }
         
@@ -409,7 +402,7 @@
             
             for(const item of carrito) {
                 const producto = productos.find(p => p.id === item.id);
-                producto.stock -= item.cantidad;
+                if(producto) producto.stock -= item.cantidad;
             }
             
             ventas.push({ fecha: new Date(), total: total, pago: formaPago });
@@ -499,21 +492,29 @@
             }
         }
         
+        // CORREÇÃO: Impedir o recarregamento da página ao salvar o produto
         document.getElementById('productoForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+            e.preventDefault(); // <-- Trava o recarregamento automático do form
+            
             const nuevoId = Date.now();
+            const codigo = document.getElementById('codigo').value.trim();
+            const nombre = document.getElementById('nombre').value.trim();
+            const precio = parseFloat(document.getElementById('precio').value);
+            const stock = parseInt(document.getElementById('stock').value);
+
             productos.push({
                 id: nuevoId,
-                codigo: document.getElementById('codigo').value,
-                nombre: document.getElementById('nombre').value,
-                precio: parseFloat(document.getElementById('precio').value),
-                stock: parseInt(document.getElementById('stock').value)
+                codigo: codigo,
+                nombre: nombre,
+                precio: precio,
+                stock: stock
             });
+
             salvarDados();
-            alert('Producto guardado');
+            alert('✅ ¡Producto guardado correctamente!');
             this.reset();
             renderizarProductos();
-            actualizarAdmin();
+            actualizarAdmin(); // Atualiza a tabela na mesma hora sem fechar o modal
         });
         
         function abrirTab(tab) {
