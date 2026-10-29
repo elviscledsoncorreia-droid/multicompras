@@ -45,7 +45,7 @@
         
         .pago-section { margin-bottom: 15px; }
         .pago-section select, .pago-section input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; margin-top: 5px; font-size: 14px; }
-        .vuelto-box { background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 10px; text-align: center; }
+        .vuelto-box { background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 10px; text-align: center; border: 1px solid #c8e6c9; }
         .vuelto-valor { font-size: 28px; font-weight: bold; color: #27ae60; }
         
         .btn-finalizar { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; font-size: 16px; font-weight: bold; }
@@ -116,10 +116,10 @@
                     </select>
                 </div>
                 <div id="efectivoDiv">
-                    <input type="number" id="recibido" placeholder="Monto recibido" step="0.01">
-                    <div class="vuelto-box" id="vueltoBox" style="display:none;">
+                    <input type="number" id="recibido" placeholder="Monto recibido" oninput="calcularVuelto()" step="0.01">
+                    <div class="vuelto-box" id="vueltoBox">
                         <strong>🔄 VUELTO</strong>
-                        <div class="vuelto-valor" id="vueltoValor">Gs 0</div>
+                        <div class="vuelto-valor" id="vueltoValor">Gs 0.00</div>
                     </div>
                 </div>
                 <button class="btn-finalizar" onclick="finalizarVenta()">✅ Finalizar Venta</button>
@@ -290,7 +290,7 @@
             document.getElementById('subtotal').innerHTML = `Gs ${total.toFixed(2)}`;
             document.getElementById('totalCarrito').innerHTML = `Gs ${total.toFixed(2)}`;
             
-            atualizarFormaPago();
+            calcularVuelto();
         }
 
         function atualizarFormaPago() {
@@ -300,8 +300,8 @@
                 efectivoDiv.style.display = 'block';
             } else {
                 efectivoDiv.style.display = 'none';
-                document.getElementById('recibido').value = '';
-                document.getElementById('vueltoBox').style.display = 'none';
+                document.getElementById('recibido.value') = '';
+                document.getElementById('vueltoValor').innerHTML = 'Gs 0.00';
             }
         }
         
@@ -321,17 +321,17 @@
             renderizarCarrito();
         }
         
-        document.getElementById('recibido').addEventListener('input', function() {
+        function calcularVuelto() {
             const total = carrito.reduce((s, i) => s + i.subtotal, 0);
-            const recibido = parseFloat(this.value) || 0;
+            const recibido = parseFloat(document.getElementById('recibido').value) || 0;
             const vuelto = recibido - total;
-            if(recibido >= total && total > 0) {
-                document.getElementById('vueltoBox').style.display = 'block';
+            
+            if (recibido >= total && total > 0) {
                 document.getElementById('vueltoValor').innerHTML = `Gs ${vuelto.toFixed(2)}`;
             } else {
-                document.getElementById('vueltoBox').style.display = 'none';
+                document.getElementById('vueltoValor').innerHTML = `Gs 0.00`;
             }
-        });
+        }
         
         function finalizarVenta() {
             if(!cajaAbierta) { alert('Caja cerrada'); return; }
@@ -384,7 +384,7 @@
             
             carrito = [];
             document.getElementById('recibido').value = '';
-            document.getElementById('vueltoBox').style.display = 'none';
+            document.getElementById('vueltoValor').innerHTML = 'Gs 0.00';
             renderizarCarrito();
             renderizarProductos();
             actualizarAdmin();
