@@ -259,7 +259,7 @@
             localStorage.setItem('multicompras_ventas', JSON.stringify(ventas));
         }
 
-        // ========== LEITOR POR CÂMERA (COM TOLERÂNCIA MELHORADA) ==========
+        // ========== LEITOR POR CÂMERA (COM TOLERÂNCIA TOTAL DE LEITURA) ==========
         function toggleCamara() {
             const readerDiv = document.getElementById('reader');
             if (!cameraAtiva) {
@@ -296,21 +296,21 @@
         }
 
         function encontrarEAdicionarPorCodigo(codigoLido) {
-            // Limpa espaços ou caracteres extras que a câmera possa capturar
-            const codigoLidoLimpo = codigoLido.trim();
+            // Limpa qualquer caractere não numérico da leitura
+            const limpoLido = codigoLido.replace(/\D/g, '');
             
-            // Busca exata ou por correspondência parcial (caso a câmera pegue dígitos extras)
-            let prod = productos.find(p => p.codigo.trim() === codigoLidoLimpo);
-            
-            if (!prod) {
-                // Tenta achar se o código cadastrado está contido no que a câmera leu
-                prod = productos.find(p => codigoLidoLimpo.includes(p.codigo.trim()) || p.codigo.trim().includes(codigoLidoLimpo));
-            }
+            // Tenta encontrar o produto comparando apenas os números limpos
+            let prod = productos.find(p => {
+                const limpoCadastrado = p.codigo.replace(/\D/g, '');
+                return limpoCadastrado === limpoLido || 
+                       limpoLido.includes(limpoCadastrado) || 
+                       limpoCadastrado.includes(limpoLido);
+            });
 
             if (prod) {
                 agregarAlCarrito(prod.id);
             } else {
-                alert(`⚠️ Código leído: "${codigoLidoLimpo}" no encontrado en el sistema.`);
+                alert(`⚠️ Código leído: "${codigoLido}" (Limpio: ${limpoLido}) no encontrado.`);
             }
         }
 
@@ -451,6 +451,7 @@
             ventas.push({ fecha: new Date(), total: total, pago: formaPago });
             salvarDados();
             
+            // Nota fiscal gerada SEM o RUC (conforme solicitado anteriormente)
             let comprobante = '═'.repeat(40) + '\n';
             comprobante += '        🏪 MULTI COMPRAS\n';
             comprobante += '═'.repeat(40) + '\n';
