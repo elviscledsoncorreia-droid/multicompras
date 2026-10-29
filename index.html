@@ -9,7 +9,11 @@
         .container { max-width: 1200px; margin: 0 auto; }
         
         .header { background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .logo h1 { color: #1a1a2e; }
+        .logo h1 { color: #1a1a2e; font-size: 26px; }
+        .logo-info { display: flex; flex-direction: column; gap: 4px; }
+        .reloj-local { font-size: 14px; color: #555; font-weight: bold; }
+        .ruc-badge { font-size: 13px; color: #3498db; font-weight: bold; }
+
         .caja-control { display: flex; gap: 10px; align-items: center; }
         .caja-status { background: #e74c3c; color: white; padding: 10px 20px; border-radius: 10px; font-weight: bold; }
         .caja-status.abierta { background: #27ae60; }
@@ -69,7 +73,10 @@
         <div class="header">
             <div class="logo">
                 <h1>🏪 Multi Compras</h1>
-                <p>Punto de Venta</p>
+                <div class="logo-info">
+                    <span class="reloj-local" id="relojLocal">🕒 Cargando horario...</span>
+                    <span class="ruc-badge">R.U.C: CID: 6337904</span>
+                </div>
             </div>
             <div class="caja-control">
                 <div class="caja-status" id="cajaStatus">🔒 CAJA CERRADA</div>
@@ -170,6 +177,21 @@
     </div>
 
     <script>
+        // ========== RELÓGIO LOCAL EM TEMPO REAL ==========
+        function atualizarRelogio() {
+            const agora = new Date();
+            const horas = String(agora.getHours()).padStart(2, '0');
+            const minutos = String(agora.getMinutes()).padStart(2, '0');
+            const segundos = String(agora.getSeconds()).padStart(2, '0');
+            const fechaStr = agora.toLocaleDateString();
+            document.getElementById('relojLocal').innerHTML = `🕒 ${fechaStr} - ${horas}:${minutos}:${segundos}`;
+        }
+        setInterval(atualizarRelogio, 1000);
+        atualizarRelogio();
+
+        // ========== RUC CONFIGURÁVEL ==========
+        const RUC_EMPRESA = "R.U.C: CID: 6337904";
+
         // ========== DATOS LOCAIS COM PERSISTÊNCIA (localStorage) ==========
         let productos = JSON.parse(localStorage.getItem('multicompras_productos')) || [
             { id: 1, codigo: "789100001", nombre: "Arroz 1kg", precio: 8500, stock: 50 },
@@ -183,12 +205,13 @@
         ];
         
         let ventas = JSON.parse(localStorage.getItem('multicompras_ventas')) || [];
-        // Converte as datas de string de volta para objeto Date
         ventas.forEach(v => v.fecha = new Date(v.fecha));
 
         let carrito = [];
         let cajaAbierta = false;
         
+        document.getElementById('rucTexto').innerText = RUC_EMPRESA;
+
         function salvarDados() {
             localStorage.setItem('multicompras_productos', JSON.stringify(productos));
             localStorage.setItem('multicompras_ventas', JSON.stringify(ventas));
@@ -323,11 +346,11 @@
             }
             
             ventas.push({ fecha: new Date(), total: total, pago: formaPago });
-            salvarDados(); // Salva o estoque atualizado e a venda no navegador
+            salvarDados();
             
             let comprobante = '═'.repeat(40) + '\n';
             comprobante += '        🏪 MULTI COMPRAS\n';
-            comprobante += '     Punto de Venta\n';
+            comprobante += `       ${RUC_EMPRESA}\n`;
             comprobante += '═'.repeat(40) + '\n';
             comprobante += `Fecha: ${new Date().toLocaleString()}\n`;
             comprobante += '═'.repeat(40) + '\n';
@@ -409,7 +432,7 @@
         
         document.getElementById('productoForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const nuevoId = Date.now(); // ID único baseado em tempo para evitar duplicados
+            const nuevoId = Date.now();
             productos.push({
                 id: nuevoId,
                 codigo: document.getElementById('codigo').value,
@@ -417,7 +440,7 @@
                 precio: parseFloat(document.getElementById('precio').value),
                 stock: parseInt(document.getElementById('stock').value)
             });
-            salvarDados(); // Salva o novo produto no navegador imediatamente
+            salvarDados();
             alert('Producto guardado');
             this.reset();
             renderizarProductos();
