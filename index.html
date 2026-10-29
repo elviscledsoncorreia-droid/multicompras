@@ -5,6 +5,8 @@
     <title>Multi Compras - PDV</title>
     <!-- Biblioteca para Leitor de Código de Barras por Câmera -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Biblioteca do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #1a1a2e; padding: 20px; }
@@ -190,6 +192,12 @@
     </div>
 
     <script>
+        // ========== CONFIGURAÇÃO DO SUPABASE CONECTADA ==========
+        const SUPABASE_URL = 'https://ukdzfjcmzkzgvyfaludq.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable__koEyv-IHiKG44IWVJotIg_hilEu8lL';
+
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         // ========== FORMATAÇÃO DE GUARANÍ ==========
         function formatarGs(valor) {
             const numero = Math.round(Number(valor) || 0);
@@ -231,31 +239,8 @@
         setInterval(atualizarRelogio, 1000);
         atualizarRelogio();
 
-        // ========== RUC CONFIGURÁVEL ==========
-        const RUC_EMPRESA = "R.U.C: CID: 6337904";
-
-        // ========== GERENCIAMENTO DE DADOS COM CONTROLE DE VERSÃO ==========
-        const DB_VERSION = "v2_2026"; // Mude este código se quiser forçar limpeza futura
-        const versaoSalva = localStorage.getItem('multicompras_db_version');
-
-        let productos;
-        if (versaoSalva !== DB_VERSION) {
-            // Se a versão mudou, reseta o localStorage do celular para puxar os produtos limpos
-            localStorage.removeItem('multicompras_productos');
-            localStorage.setItem('multicompras_db_version', DB_VERSION);
-        }
-
-        productos = JSON.parse(localStorage.getItem('multicompras_productos')) || [
-            { id: 1, codigo: "789100001", nombre: "Arroz 1kg", precio: 8500, stock: 50 },
-            { id: 2, codigo: "789100002", nombre: "Feijão 1kg", precio: 7900, stock: 40 },
-            { id: 3, codigo: "789100003", nombre: "Açúcar 1kg", precio: 4500, stock: 60 },
-            { id: 4, codigo: "789100004", nombre: "Café 500g", precio: 12900, stock: 30 },
-            { id: 5, codigo: "789100005", nombre: "Leche 1L", precio: 5200, stock: 45 },
-            { id: 6, codigo: "789100006", nombre: "Aceite 900ml", precio: 6800, stock: 35 },
-            { id: 7, codigo: "789100007", nombre: "Fideos 500g", precio: 3900, stock: 55 },
-            { id: 8, codigo: "789100008", nombre: "Jabón 800g", perox: 9500, stock: 25 }
-        ];
-        
+        // ========== VARIÁVEIS GLOBAIS ==========
+        let productos = [];
         let ventas = JSON.parse(localStorage.getItem('multicompras_ventas')) || [];
         ventas.forEach(v => v.fecha = new Date(v.fecha));
 
@@ -264,12 +249,24 @@
         let html5QrCode = null;
         let cameraAtiva = false;
 
-        function salvarDados() {
-            localStorage.setItem('multicompras_productos', JSON.stringify(productos));
-            localStorage.setItem('multicompras_ventas', JSON.stringify(ventas));
+        // ========== CARREGAR PRODUTOS DO SUPABASE ==========
+        async function carregarProdutos() {
+            const { data, error } = await supabaseClient.from('productos').select('*').order('id', { ascending: true });
+            if (error) {
+                console.error('Erro ao carregar produtos do Supabase:', error);
+                return;
+            }
+            productos = data || [];
+            renderizarProductos();
+            if (document.getElementById('adminPanel').style.display === 'block') {
+                actualizarAdmin();
+            }
         }
 
-        // ========== LEITOR POR CÂMERA (COM TOLERÂNCIA TOTAL DE LEITURA) ==========
+        // Carrega os produtos assim que a página abre
+        carregarProdutos();
+
+        // ========== LEITOR POR CÂMERA ==========
         function toggleCamara() {
             const readerDiv = document.getElementById('reader');
             if (!cameraAtiva) {
@@ -307,7 +304,6 @@
 
         function encontrarEAdicionarPorCodigo(codigoLido) {
             const limpoLido = codigoLido.replace(/\D/g, '');
-            
             let prod = productos.find(p => {
                 const limpoCadastrado = p.codigo.replace(/\D/g, '');
                 return limpoCadastrado === limpoLido || 
@@ -318,7 +314,7 @@
             if (prod) {
                 agregarAlCarrito(prod.id);
             } else {
-                alert(`⚠️ Código leído: "${codigoLido}" (Limpio: ${limpoLido}) no encontrado.`);
+                alert(`⚠️ Código leído: "${codigoLido}" no encontrado.`);
             }
         }
 
@@ -342,7 +338,7 @@
             document.getElementById('btnCerrarCaja').style.display = 'none';
         }
         
-        // ========== FUNCIONES PRINCIPALES ==========
+        // ========== RENDERIZAR PRODUTOS ==========
         function renderizarProductos(lista) {
             const grid = document.getElementById('productosGrid');
             const datos = lista || productos;
@@ -364,7 +360,7 @@
         }
         
         function agregarAlCarrito(id) {
-            if(!cajaAbierta) { alert('⚠️ Primero abre la caja (botón "Abrir Caja" arriba)'); return; }
+            if(!cajaAbierta) { alert('⚠️ Primero abre la caja'); return; }
             const producto = productos.find(p => p.id === id);
             const item = carrito.find(i => i.id === id);
             if(item) {
@@ -394,7 +390,6 @@
             const total = carrito.reduce((s, i) => s + i.subtotal, 0);
             document.getElementById('subtotal').innerHTML = `Gs ${formatarGs(total)}`;
             document.getElementById('totalCarrito').innerHTML = `Gs ${formatarGs(total)}`;
-            
             calcularVuelto();
         }
 
@@ -438,7 +433,7 @@
             }
         }
         
-        function finalizarVenta() {
+        async function finalizarVenta() {
             if(!cajaAbierta) { alert('Caja cerrada'); return; }
             if(carrito.length === 0) { alert('Carrito vacío'); return; }
             const total = carrito.reduce((s, i) => s + i.subtotal, 0);
@@ -451,13 +446,17 @@
                 vuelto = recibido - total;
             }
             
+            // Atualiza o estoque no Supabase para cada item comprado
             for(const item of carrito) {
                 const producto = productos.find(p => p.id === item.id);
-                if(producto) producto.stock -= item.cantidad;
+                if(producto) {
+                    const nuevoStock = producto.stock - item.cantidad;
+                    await supabaseClient.from('productos').update({ stock: nuevoStock }).eq('id', item.id);
+                }
             }
             
             ventas.push({ fecha: new Date(), total: total, pago: formaPago });
-            salvarDados();
+            localStorage.setItem('multicompras_ventas', JSON.stringify(ventas));
             
             let comprobante = '═'.repeat(40) + '\n';
             comprobante += '        🏪 MULTI COMPRAS\n';
@@ -490,8 +489,7 @@
             document.getElementById('recibido').value = '';
             document.getElementById('vueltoValor').innerHTML = 'Gs 0';
             renderizarCarrito();
-            renderizarProductos();
-            actualizarAdmin();
+            carregarProdutos(); // Recarrega do Supabase com o estoque atualizado
         }
         
         // ========== ADMIN ==========
@@ -539,12 +537,14 @@
             `).join('');
         }
         
-        function eliminarProducto(id) {
+        async function eliminarProducto(id) {
             if(confirm('¿Eliminar este producto?')) {
-                productos = productos.filter(p => p.id !== id);
-                salvarDados();
-                renderizarProductos();
-                actualizarAdmin();
+                const { error } = await supabaseClient.from('productos').delete().eq('id', id);
+                if (error) {
+                    alert('Erro ao excluir produto.');
+                    return;
+                }
+                carregarProdutos();
             }
         }
 
@@ -561,7 +561,6 @@
             document.getElementById('formTitulo').innerText = '✏️ Editar Producto';
             document.getElementById('btnGuardar').innerText = '💾 Actualizar Producto';
             document.getElementById('btnCancelarEdicao').style.display = 'inline-block';
-            
             document.querySelector('.modal-content').scrollTop = 0;
         }
 
@@ -573,7 +572,7 @@
             document.getElementById('btnCancelarEdicao').style.display = 'none';
         }
         
-        document.getElementById('productoForm').addEventListener('submit', function(e) {
+        document.getElementById('productoForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const editandoId = document.getElementById('editandoId').value;
@@ -583,30 +582,32 @@
             const stock = parseGs(document.getElementById('stock').value);
 
             if (editandoId) {
-                const prod = productos.find(p => p.id == editandoId);
-                if (prod) {
-                    prod.codigo = codigo;
-                    prod.nombre = nombre;
-                    prod.precio = precio;
-                    prod.stock = stock;
+                // Atualizar produto existente no Supabase
+                const { error } = await supabaseClient
+                    .from('productos')
+                    .update({ codigo, nombre, precio, stock })
+                    .eq('id', editandoId);
+
+                if (error) {
+                    alert('Erro ao atualizar produto.');
+                    return;
                 }
                 alert('✅ ¡Producto actualizado correctamente!');
             } else {
-                const nuevoId = Date.now();
-                productos.push({
-                    id: nuevoId,
-                    codigo: codigo,
-                    nombre: nombre,
-                    precio: precio,
-                    stock: stock
-                });
+                // Inserir novo produto no Supabase
+                const { error } = await supabaseClient
+                    .from('productos')
+                    .insert([{ codigo, nombre, precio, stock }]);
+
+                if (error) {
+                    alert('Erro ao salvar produto no Supabase. Verifique se a tabela está correta.');
+                    return;
+                }
                 alert('✅ ¡Producto guardado correctamente!');
             }
 
-            salvarDados();
             cancelarEdicao();
-            renderizarProductos();
-            actualizarAdmin();
+            carregarProdutos();
         });
         
         function abrirTab(tab) {
@@ -616,8 +617,6 @@
             if(tab === 'productos') document.querySelector('.tab-btn:first-child').classList.add('activo');
             else document.querySelector('.tab-btn:last-child').classList.add('activo');
         }
-        
-        renderizarProductos();
     </script>
 </body>
 </html>
