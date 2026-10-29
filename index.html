@@ -190,7 +190,7 @@
     </div>
 
     <script>
-        // ========== FORMATAÇÃO DE GUARANÍ (Sem centavos, com pontos nos milhares) ==========
+        // ========== FORMATAÇÃO DE GUARANÍ ==========
         function formatarGs(valor) {
             const numero = Math.round(Number(valor) || 0);
             return numero.toLocaleString('es-PY');
@@ -259,7 +259,7 @@
             localStorage.setItem('multicompras_ventas', JSON.stringify(ventas));
         }
 
-        // ========== LEITOR POR CÂMERA ==========
+        // ========== LEITOR POR CÂMERA (COM TOLERÂNCIA MELHORADA) ==========
         function toggleCamara() {
             const readerDiv = document.getElementById('reader');
             if (!cameraAtiva) {
@@ -295,12 +295,22 @@
             }
         }
 
-        function encontrarEAdicionarPorCodigo(codigo) {
-            const prod = productos.find(p => p.codigo === codigo);
+        function encontrarEAdicionarPorCodigo(codigoLido) {
+            // Limpa espaços ou caracteres extras que a câmera possa capturar
+            const codigoLidoLimpo = codigoLido.trim();
+            
+            // Busca exata ou por correspondência parcial (caso a câmera pegue dígitos extras)
+            let prod = productos.find(p => p.codigo.trim() === codigoLidoLimpo);
+            
+            if (!prod) {
+                // Tenta achar se o código cadastrado está contido no que a câmera leu
+                prod = productos.find(p => codigoLidoLimpo.includes(p.codigo.trim()) || p.codigo.trim().includes(codigoLidoLimpo));
+            }
+
             if (prod) {
                 agregarAlCarrito(prod.id);
             } else {
-                alert(`⚠️ Producto con código "${codigo}" no encontrado.`);
+                alert(`⚠️ Código leído: "${codigoLidoLimpo}" no encontrado en el sistema.`);
             }
         }
 
@@ -544,7 +554,6 @@
             document.getElementById('btnGuardar').innerText = '💾 Actualizar Producto';
             document.getElementById('btnCancelarEdicao').style.display = 'inline-block';
             
-            // Rola o modal para o topo para facilitar a edição
             document.querySelector('.modal-content').scrollTop = 0;
         }
 
@@ -566,7 +575,6 @@
             const stock = parseGs(document.getElementById('stock').value);
 
             if (editandoId) {
-                // Modo Edição
                 const prod = productos.find(p => p.id == editandoId);
                 if (prod) {
                     prod.codigo = codigo;
@@ -576,7 +584,6 @@
                 }
                 alert('✅ ¡Producto actualizado correctamente!');
             } else {
-                // Modo Novo Cadastro
                 const nuevoId = Date.now();
                 productos.push({
                     id: nuevoId,
