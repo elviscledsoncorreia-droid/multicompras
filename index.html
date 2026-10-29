@@ -559,14 +559,14 @@
             document.getElementById('editandoId').value = prod.id;
             document.getElementById('codigo_barras').value = prod.codigo_barras || '';
             document.getElementById('nombre').value = prod.nombre;
-            document.getElementById('preco').value = formatarGs(prod.preco);
+            document.getElementById('precio').value = formatarGs(prod.preco);
             document.getElementById('quantidade').value = formatarGs(prod.quantidade);
             document.getElementById('categoria').value = prod.categoria || '';
 
             document.getElementById('formTitulo').innerText = '✏️ Editar Producto';
             document.getElementById('btnGuardar').innerText = '💾 Actualizar Producto';
             document.getElementById('btnCancelarEdicao').style.display = 'inline-block';
-            document.querySelector('.modal-content').scrollTop = 0;
+            document.querySelector('.modal-content').scrollTop = document.querySelector('.modal-content').scrollHeight;
         }
 
         function cancelarEdicao() {
@@ -583,7 +583,7 @@
             const editandoId = document.getElementById('editandoId').value;
             const codigo_barras = document.getElementById('codigo_barras').value.trim();
             const nombre = document.getElementById('nombre').value.trim();
-            const preco = parseGs(document.getElementById('preco').value);
+            const preco = parseGs(document.getElementById('precio').value);
             const quantidade = parseGs(document.getElementById('quantidade').value);
             const categoria = document.getElementById('categoria').value.trim();
 
@@ -600,13 +600,14 @@
                 }
                 alert('✅ ¡Producto actualizado correctamente!');
             } else {
-                // Inserir novo produto no Supabase
+                // Inserir novo produto no Supabase com os nomes exatos das colunas
                 const { error } = await supabaseClient
                     .from('produtos')
                     .insert([{ codigo_barras, nombre, preco, quantidade, categoria }]);
 
                 if (error) {
                     alert('Erro ao salvar produto no Supabase.');
+                    console.error(error);
                     return;
                 }
                 alert('✅ ¡Producto guardado correctamente!');
