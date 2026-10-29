@@ -162,10 +162,11 @@
                     <h3 id="formTitulo">➕ Agregar Producto</h3>
                     <form id="productoForm">
                         <input type="hidden" id="editandoId" value="">
-                        <div class="form-group"><label>Código de Barras</label><input type="text" id="codigo" required></div>
+                        <div class="form-group"><label>Código de Barras</label><input type="text" id="codigo_barras" required></div>
                         <div class="form-group"><label>Nombre</label><input type="text" id="nombre" required></div>
                         <div class="form-group"><label>Precio (Gs)</label><input type="text" id="precio" placeholder="Ej: 8.500" oninput="formatarInputMoneda(this)" required></div>
-                        <div class="form-group"><label>Stock</label><input type="text" id="stock" placeholder="Ej: 45" oninput="formatarInputNumero(this)" required></div>
+                        <div class="form-group"><label>Stock / Cantidad</label><input type="text" id="quantidade" placeholder="Ej: 45" oninput="formatarInputNumero(this)" required></div>
+                        <div class="form-group"><label>Categoría</label><input type="text" id="categoria" placeholder="Ej: Alimentación"></div>
                         <button type="submit" id="btnGuardar" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">💾 Guardar Producto</button>
                         <button type="button" id="btnCancelarEdicao" onclick="cancelarEdicao()" style="background:#7f8c8d; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; display:none; margin-left: 10px;">❌ Cancelar</button>
                     </form>
@@ -251,7 +252,7 @@
 
         // ========== CARREGAR PRODUTOS DO SUPABASE ==========
         async function carregarProdutos() {
-            const { data, error } = await supabaseClient.from('productos').select('*').order('id', { ascending: true });
+            const { data, error } = await supabaseClient.from('produtos').select('*').order('id', { ascending: true });
             if (error) {
                 console.error('Erro ao carregar produtos do Supabase:', error);
                 return;
@@ -305,10 +306,10 @@
         function encontrarEAdicionarPorCodigo(codigoLido) {
             const limpoLido = codigoLido.replace(/\D/g, '');
             let prod = productos.find(p => {
-                const limpoCadastrado = p.codigo.replace(/\D/g, '');
-                return limpoCadastrado === limpoLido || 
-                       limpoLido.includes(limpoCadastrado) || 
-                       limpoCadastrado.includes(limpoLido);
+                const codCad = p.codigo_barras ? p.codigo_barras.toString().replace(/\D/g, '') : '';
+                return codCad === limpoLido || 
+                       limpoLido.includes(codCad) || 
+                       codCad.includes(limpoLido);
             });
 
             if (prod) {
@@ -346,8 +347,8 @@
             grid.innerHTML = datos.map(p => `
                 <div class="producto-card" onclick="agregarAlCarrito(${p.id})">
                     <div><b>${p.nombre}</b></div>
-                    <div class="producto-precio">Gs ${formatarGs(p.precio)}</div>
-                    <div>Stock: ${formatarGs(p.stock)}</div>
+                    <div class="producto-precio">Gs ${formatarGs(p.preco)}</div>
+                    <div>Stock: ${formatarGs(p.quantidade)}</div>
                 </div>
             `).join('');
         }
@@ -355,7 +356,10 @@
         function buscarProducto() {
             const termo = document.getElementById('buscaInput').value.toLowerCase();
             if(!termo) { renderizarProductos(productos); return; }
-            const filtrados = productos.filter(p => p.codigo.toLowerCase().includes(termo) || p.nombre.toLowerCase().includes(termo));
+            const filtrados = productos.filter(p => 
+                (p.codigo_barras && p.codigo_barras.toLowerCase().includes(termo)) || 
+                p.nombre.toLowerCase().includes(termo)
+            );
             renderizarProductos(filtrados);
         }
         
@@ -364,12 +368,12 @@
             const producto = productos.find(p => p.id === id);
             const item = carrito.find(i => i.id === id);
             if(item) {
-                if(item.cantidad + 1 > producto.stock) { alert('Stock insuficiente'); return; }
+                if(item.cantidad + 1 > producto.quantidade) { alert('Stock insuficiente'); return; }
                 item.cantidad++;
                 item.subtotal = item.cantidad * item.precio;
             } else {
-                if(producto.stock < 1) { alert('Sin stock'); return; }
-                carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: 1, subtotal: producto.precio });
+                if(producto.quantidade < 1) { alert('Sin stock'); return; }
+                carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.preco, cantidad: 1, subtotal: producto.preco });
             }
             renderizarCarrito();
         }
@@ -411,7 +415,7 @@
             const nova = item.cantidad + delta;
             if(nova < 1) {
                 carrito.splice(idx, 1);
-            } else if(nova > producto.stock) {
+            } else if(nova > producto.quantidade) {
                 alert('Stock insuficiente');
                 return;
             } else {
@@ -450,8 +454,8 @@
             for(const item of carrito) {
                 const producto = productos.find(p => p.id === item.id);
                 if(producto) {
-                    const nuevoStock = producto.stock - item.cantidad;
-                    await supabaseClient.from('productos').update({ stock: nuevoStock }).eq('id', item.id);
+                    const nuevaCantidad = producto.quantidade - item.cantidad;
+                    await supabaseClient.from('produtos').update({ quantidade: nuevaCantidad }).eq('id', item.id);
                 }
             }
             
@@ -519,7 +523,7 @@
             const tbody = document.getElementById('listaProductos');
             tbody.innerHTML = productos.map(p => `
                 <tr>
-                    <td>${p.codigo}</td><td>${p.nombre}</td><td>Gs ${formatarGs(p.precio)}</td><td>${formatarGs(p.stock)}</td>
+                    <td>${p.codigo_barras || ''}</td><td>${p.nombre}</td><td>Gs ${formatarGs(p.preco)}</td><td>${formatarGs(p.quantidade)}</td>
                     <td>
                         <div class="acciones-btns">
                             <button class="btn-editar" onclick="prepararEdicao(${p.id})">✏️</button>
@@ -539,7 +543,7 @@
         
         async function eliminarProducto(id) {
             if(confirm('¿Eliminar este producto?')) {
-                const { error } = await supabaseClient.from('productos').delete().eq('id', id);
+                const { error } = await supabaseClient.from('produtos').delete().eq('id', id);
                 if (error) {
                     alert('Erro ao excluir produto.');
                     return;
@@ -553,10 +557,11 @@
             if(!prod) return;
 
             document.getElementById('editandoId').value = prod.id;
-            document.getElementById('codigo').value = prod.codigo;
+            document.getElementById('codigo_barras').value = prod.codigo_barras || '';
             document.getElementById('nombre').value = prod.nombre;
-            document.getElementById('precio').value = formatarGs(prod.precio);
-            document.getElementById('stock').value = formatarGs(prod.stock);
+            document.getElementById('preco').value = formatarGs(prod.preco);
+            document.getElementById('quantidade').value = formatarGs(prod.quantidade);
+            document.getElementById('categoria').value = prod.categoria || '';
 
             document.getElementById('formTitulo').innerText = '✏️ Editar Producto';
             document.getElementById('btnGuardar').innerText = '💾 Actualizar Producto';
@@ -576,16 +581,17 @@
             e.preventDefault();
             
             const editandoId = document.getElementById('editandoId').value;
-            const codigo = document.getElementById('codigo').value.trim();
+            const codigo_barras = document.getElementById('codigo_barras').value.trim();
             const nombre = document.getElementById('nombre').value.trim();
-            const precio = parseGs(document.getElementById('precio').value);
-            const stock = parseGs(document.getElementById('stock').value);
+            const preco = parseGs(document.getElementById('preco').value);
+            const quantidade = parseGs(document.getElementById('quantidade').value);
+            const categoria = document.getElementById('categoria').value.trim();
 
             if (editandoId) {
                 // Atualizar produto existente no Supabase
                 const { error } = await supabaseClient
-                    .from('productos')
-                    .update({ codigo, nombre, precio, stock })
+                    .from('produtos')
+                    .update({ codigo_barras, nombre, preco, quantidade, categoria })
                     .eq('id', editandoId);
 
                 if (error) {
@@ -596,11 +602,11 @@
             } else {
                 // Inserir novo produto no Supabase
                 const { error } = await supabaseClient
-                    .from('productos')
-                    .insert([{ codigo, nombre, precio, stock }]);
+                    .from('produtos')
+                    .insert([{ codigo_barras, nombre, preco, quantidade, categoria }]);
 
                 if (error) {
-                    alert('Erro ao salvar produto no Supabase. Verifique se a tabela está correta.');
+                    alert('Erro ao salvar produto no Supabase.');
                     return;
                 }
                 alert('✅ ¡Producto guardado correctamente!');
