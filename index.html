@@ -58,21 +58,28 @@
         .btn-finalizar { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; font-size: 16px; font-weight: bold; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; border-radius: 10px; width: 90%; max-width: 600px; max-height: 80%; overflow-y: auto; padding: 20px; }
+        .modal-content { background: white; border-radius: 10px; width: 92%; max-width: 900px; max-height: 85%; overflow-y: auto; padding: 20px; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .close-modal { background: #e74c3c; color: white; border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 16px; }
         .form-group { margin-bottom: 15px; }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px; }
+        th { background: #f8f9fa; }
         .acciones-btns { display: flex; gap: 5px; }
         .btn-editar { background: #f39c12; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
         .btn-eliminar { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
-        .admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .tab-btn { padding: 10px 20px; background: #f0f0f0; border: none; border-radius: 5px; cursor: pointer; }
+        
+        .admin-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .tab-btn { padding: 8px 15px; background: #f0f0f0; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px; }
         .tab-btn.activo { background: #3498db; color: white; }
         .tab-panel { display: none; }
         .tab-panel.activo { display: block; }
+
+        .report-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .report-card { background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; }
+        .report-card h4 { color: #666; font-size: 13px; margin-bottom: 5px; }
+        .report-card .val { font-size: 20px; font-weight: bold; color: #2c3e50; }
         
         @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } }
     </style>
@@ -95,7 +102,7 @@
         </div>
 
         <div class="admin-area">
-            <span>🔧 Panel de Administración y Control de Stock</span>
+            <span>🔧 Panel de Administración, Inventario y Reportes</span>
             <button class="btn-admin" onclick="abrirAdmin()">🔐 Acceso Restringido</button>
         </div>
 
@@ -140,31 +147,34 @@
         </div>
     </div>
 
-    <!-- Modal Admin -->
+    <!-- Modal Admin / Relatórios / Inventario -->
     <div id="adminModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>🔐 Panel de Administración</h2>
+                <h2>🔐 Panel Administrativo y Fical</h2>
                 <button class="close-modal" onclick="cerrarAdmin()">✖</button>
             </div>
             <div id="loginBox">
                 <h3>Acceso Restringido</h3>
-                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Ingrese la contraseña para administrar productos y ver ventas.</p>
+                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Ingrese la contraseña para gestionar productos, inventario y reportes.</p>
                 <input type="password" id="senha" placeholder="Contraseña (admin123)" style="padding:10px; width:100%; margin:10px 0;">
                 <button onclick="verificarSenha()" style="padding:10px 20px; background:#3498db; color:white; border:none; border-radius:5px; cursor:pointer;">Entrar</button>
             </div>
             <div id="adminPanel" style="display:none;">
                 <div class="admin-tabs">
                     <button class="tab-btn activo" onclick="abrirTab('productos')">📦 Productos</button>
-                    <button class="tab-btn" onclick="abrirTab('ventas')">📊 Ventas</button>
+                    <button class="tab-btn" onclick="abrirTab('inventario')">📋 Inventario</button>
+                    <button class="tab-btn" onclick="abrirTab('relatorios')">📊 Relatorios Fiscales</button>
                 </div>
+
+                <!-- ABA 1: PRODUTOS -->
                 <div id="tabProductos" class="tab-panel activo">
                     <h3 id="formTitulo">➕ Agregar Producto</h3>
                     <form id="productoForm">
                         <input type="hidden" id="editandoId" value="">
                         <div class="form-group"><label>Código de Barras</label><input type="text" id="codigo_barras" required></div>
                         <div class="form-group"><label>Nombre</label><input type="text" id="nome" required></div>
-                        <div class="form-group"><label>Precio (Gs)</label><input type="text" id="preco" placeholder="Ej: 8.500" oninput="formatarInputMoneda(this)" required></div>
+                        <div class="form-group"><label>Precio (Gs)</label><input type="text" id="precio" placeholder="Ej: 8.500" oninput="formatarInputMoneda(this)" required></div>
                         <div class="form-group"><label>Stock / Cantidad</label><input type="text" id="quantidade" placeholder="Ej: 45" oninput="formatarInputNumero(this)" required></div>
                         <div class="form-group"><label>Categoría</label><input type="text" id="categoria" placeholder="Ej: Alimentación"></div>
                         <button type="submit" id="btnGuardar" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">💾 Guardar Producto</button>
@@ -174,17 +184,57 @@
                     <h3>📋 Lista de Productos</h3>
                     <div style="overflow-x:auto;">
                         <table id="tablaProductos">
-                            <thead><tr><th>Código</th><th>Nombre</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
+                            <thead><tr><th>Código</th><th>Nombre</th><th>Precio</th><th>Stock</th><th>Categoría</th><th>Acciones</th></tr></thead>
                             <tbody id="listaProductos"></tbody>
                         </table>
                     </div>
                 </div>
-                <div id="tabVentas" class="tab-panel">
-                    <h3>📜 Historial de Ventas</h3>
+
+                <!-- ABA 2: INVENTARIO -->
+                <div id="tabInventario" class="tab-panel">
+                    <h3>📋 Control de Inventario y Valorización</h3>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Listado completo de stock e inversión en mercadería para auditorias e inventario físico.</p>
+                    <div class="report-cards">
+                        <div class="report-card">
+                            <h4>Total de Artículos</h4>
+                            <div class="val" id="invTotalItems">0</div>
+                        </div>
+                        <div class="report-card">
+                            <h4>Valor Total en Stock</h4>
+                            <div class="val" id="invTotalValor">Gs 0</div>
+                        </div>
+                    </div>
                     <div style="overflow-x:auto;">
-                        <table id="tablaVentasAdmin">
-                            <thead><tr><th>Fecha</th><th>Total</th><th>Pago</th></tr></thead>
-                            <tbody id="listaVentasAdmin"></tbody>
+                        <table>
+                            <thead><tr><th>Código</th><th>Nombre</th><th>Categoría</th><th>Stock</th><th>Precio Unit.</th><th>Subtotal Stock</th></tr></thead>
+                            <tbody id="listaInventario"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ABA 3: RELATÓRIOS (DIÁRIO, MENSAL, ANUAL) -->
+                <div id="tabRelatorios" class="tab-panel">
+                    <h3>📊 Reportes de Ventas (Nube)</h3>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Historial oficial registrado na nuvem para controle gerencial e fiscalização.</p>
+                    <div class="report-cards">
+                        <div class="report-card">
+                            <h4>📅 Venta Diaria (Hoy)</h4>
+                            <div class="val" id="repDiario">Gs 0</div>
+                        </div>
+                        <div class="report-card">
+                            <h4>🗓️ Venta Mensal (Mes Actual)</h4>
+                            <div class="val" id="repMensal">Gs 0</div>
+                        </div>
+                        <div class="report-card">
+                            <h4>📈 Venta Anual (Año Actual)</h4>
+                            <div class="val" id="repAnual">Gs 0</div>
+                        </div>
+                    </div>
+                    <h4>📜 Detalle de Ventas Registradas</h4>
+                    <div style="overflow-x:auto; max-height: 350px;">
+                        <table>
+                            <thead><tr><th>Fecha y Hora</th><th>Forma de Pago</th><th>Total</th></tr></thead>
+                            <tbody id="listaVentasNube"></tbody>
                         </table>
                     </div>
                 </div>
@@ -242,30 +292,33 @@
 
         // ========== VARIÁVEIS GLOBAIS ==========
         let productos = [];
-        let ventas = JSON.parse(localStorage.getItem('multicompras_ventas')) || [];
-        ventas.forEach(v => v.fecha = new Date(v.fecha));
-
+        let ventasNube = [];
         let carrito = [];
         let cajaAbierta = false;
         let html5QrCode = null;
         let cameraAtiva = false;
 
-        // ========== CARREGAR PRODUTOS DO SUPABASE ==========
-        async function carregarProdutos() {
-            const { data, error } = await supabaseClient.from('produtos').select('*').order('id', { ascending: true });
-            if (error) {
-                console.error('Erro ao carregar produtos do Supabase:', error);
-                return;
+        // ========== CARREGAR DADOS DA NUVEM ==========
+        async function carregarDados() {
+            // Carregar produtos
+            const { data: prodData, error: prodErr } = await supabaseClient.from('produtos').select('*').order('id', { ascending: true });
+            if (!prodErr) {
+                productos = prodData || [];
+                renderizarProductos();
             }
-            productos = data || [];
-            renderizarProductos();
+
+            // Carregar vendas da nuvem
+            const { data: ventData, error: ventErr } = await supabaseClient.from('vendas').select('*').order('created_at', { ascending: false });
+            if (!ventErr) {
+                ventasNube = ventData || [];
+            }
+
             if (document.getElementById('adminPanel').style.display === 'block') {
                 actualizarAdmin();
             }
         }
 
-        // Carrega os produtos assim que a página abre
-        carregarProdutos();
+        carregarDados();
 
         // ========== LEITOR POR CÂMERA ==========
         function toggleCamara() {
@@ -319,7 +372,7 @@
             }
         }
 
-        // ========== FUNCIONES CAJA ==========
+        // ========== CAJA ==========
         function abrirCaja() {
             cajaAbierta = true;
             document.getElementById('cajaStatus').innerHTML = '✅ CAJA ABIERTA';
@@ -330,8 +383,11 @@
         }
         
         function cerrarCaja() {
-            const total = ventas.reduce((s, v) => s + v.total, 0);
-            alert(`🔒 Cierre de caja\nVentas registradas: ${ventas.length}\nTotal acumulado: Gs ${formatarGs(total)}`);
+            const hojeStr = new Date().toDateString();
+            const ventasHoje = ventasNube.filter(v => new Date(v.created_at).toDateString() === hojeStr);
+            const totalDia = ventasHoje.reduce((s, v) => s + v.total, 0);
+            
+            alert(`🔒 Cierre de caja\nVentas hoy: ${ventasHoje.length}\nTotal acumulado hoy: Gs ${formatarGs(totalDia)}`);
             cajaAbierta = false;
             document.getElementById('cajaStatus').innerHTML = '🔒 CAJA CERRADA';
             document.getElementById('cajaStatus').className = 'caja-status';
@@ -458,9 +514,13 @@
                     await supabaseClient.from('produtos').update({ quantidade: nuevaCantidad }).eq('id', item.id);
                 }
             }
-            
-            ventas.push({ fecha: new Date(), total: total, pago: formaPago });
-            localStorage.setItem('multicompras_ventas', JSON.stringify(ventas));
+
+            // Salva a venda na nuvem (Supabase)
+            await supabaseClient.from('vendas').insert([{
+                total: total,
+                pago: formaPago,
+                detalhes: carrito
+            }]);
             
             let comprobante = '═'.repeat(40) + '\n';
             comprobante += '        🏪 MULTI COMPRAS\n';
@@ -487,16 +547,16 @@
             ventana.document.close();
             ventana.print();
             
-            alert(`✅ Venta finalizada! Total: Gs ${formatarGs(total)}`);
+            alert(`✅ ¡Venta finalizada! Total: Gs ${formatarGs(total)}`);
             
             carrito = [];
             document.getElementById('recibido').value = '';
             document.getElementById('vueltoValor').innerHTML = 'Gs 0';
             renderizarCarrito();
-            carregarProdutos(); // Recarrega do Supabase com o estoque atualizado
+            carregarDados(); // Recarrega dados atualizados da nuvem
         }
         
-        // ========== ADMIN ==========
+        // ========== ADMIN, INVENTÁRIO E RELATÓRIOS ==========
         function abrirAdmin() {
             document.getElementById('adminModal').style.display = 'flex';
             document.getElementById('loginBox').style.display = 'block';
@@ -520,10 +580,11 @@
         }
         
         function actualizarAdmin() {
+            // Tabela de Produtos
             const tbody = document.getElementById('listaProductos');
             tbody.innerHTML = productos.map(p => `
                 <tr>
-                    <td>${p.codigo_barras || ''}</td><td>${p.nome || ''}</td><td>Gs ${formatarGs(p.preco)}</td><td>${formatarGs(p.quantidade)}</td>
+                    <td>${p.codigo_barras || ''}</td><td>${p.nome || ''}</td><td>Gs ${formatarGs(p.preco)}</td><td>${formatarGs(p.quantidade)}</td><td>${p.categoria || '-'}</td>
                     <td>
                         <div class="acciones-btns">
                             <button class="btn-editar" onclick="prepararEdicao(${p.id})">✏️</button>
@@ -533,12 +594,50 @@
                 </tr>
             `).join('');
             
-            const tbodyVentas = document.getElementById('listaVentasAdmin');
-            tbodyVentas.innerHTML = ventas.map(v => `
-                <tr>
-                    <td>${new Date(v.fecha).toLocaleString()}</td><td>Gs ${formatarGs(v.total)}</td><td>${v.pago}</td>
-                </tr>
-            `).join('');
+            // Tabela de Inventário
+            const tbodyInv = document.getElementById('listaInventario');
+            let totalItemsInv = 0;
+            let valorTotalInv = 0;
+            tbodyInv.innerHTML = productos.map(p => {
+                const subtotal = (p.preco || 0) * (p.quantidade || 0);
+                totalItemsInv += Number(p.quantidade || 0);
+                valorTotalInv += subtotal;
+                return `
+                    <tr>
+                        <td>${p.codigo_barras || ''}</td><td>${p.nome || ''}</td><td>${p.categoria || '-'}</td><td>${formatarGs(p.quantidade)}</td><td>Gs ${formatarGs(p.preco)}</td><td><b>Gs ${formatarGs(subtotal)}</b></td>
+                    </tr>
+                `;
+            }).join('');
+            document.getElementById('invTotalItems').innerText = formatarGs(totalItemsInv);
+            document.getElementById('invTotalValor').innerText = `Gs ${formatarGs(valorTotalInv)}`;
+
+            // Relatórios Fiscais e de Vendas
+            const agora = new Date();
+            const hojeStr = agora.toDateString();
+            const mesAtual = agora.getMonth();
+            const anoAtual = agora.getFullYear();
+
+            let totalDiario = 0;
+            let totalMensal = 0;
+            let totalAnual = 0;
+
+            const tbodyVentasNube = document.getElementById('listaVentasNube');
+            tbodyVentasNube.innerHTML = ventasNube.map(v => {
+                const dataVenda = new Date(v.created_at);
+                if (dataVenda.toDateString() === hojeStr) totalDiario += Number(v.total);
+                if (dataVenda.getMonth() === mesAtual && dataVenda.getFullYear() === anoAtual) totalMensal += Number(v.total);
+                if (dataVenda.getFullYear() === anoAtual) totalAnual += Number(v.total);
+
+                return `
+                    <tr>
+                        <td>${dataVenda.toLocaleString()}</td><td>${v.pago.toUpperCase()}</td><td><b>Gs ${formatarGs(v.total)}</b></td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('repDiario').innerText = `Gs ${formatarGs(totalDiario)}`;
+            document.getElementById('repMensal').innerText = `Gs ${formatarGs(totalMensal)}`;
+            document.getElementById('repAnual').innerText = `Gs ${formatarGs(totalAnual)}`;
         }
         
         async function eliminarProducto(id) {
@@ -548,7 +647,7 @@
                     alert('Erro ao excluir produto.');
                     return;
                 }
-                carregarProdutos();
+                carregarDados();
             }
         }
 
@@ -559,7 +658,7 @@
             document.getElementById('editandoId').value = prod.id;
             document.getElementById('codigo_barras').value = prod.codigo_barras || '';
             document.getElementById('nome').value = prod.nome || '';
-            document.getElementById('preco').value = formatarGs(prod.preco);
+            document.getElementById('precio').value = formatarGs(prod.preco);
             document.getElementById('quantidade').value = formatarGs(prod.quantidade);
             document.getElementById('categoria').value = prod.categoria || '';
 
@@ -583,12 +682,11 @@
             const editandoId = document.getElementById('editandoId').value;
             const codigo_barras = document.getElementById('codigo_barras').value.trim();
             const nome = document.getElementById('nome').value.trim();
-            const preco = parseGs(document.getElementById('preco').value);
+            const preco = parseGs(document.getElementById('precio').value);
             const quantidade = parseGs(document.getElementById('quantidade').value);
             const categoria = document.getElementById('categoria').value.trim();
 
             if (editandoId) {
-                // Atualizar produto existente no Supabase
                 const { error } = await supabaseClient
                     .from('produtos')
                     .update({ codigo_barras, nome, preco, quantidade, categoria })
@@ -600,29 +698,30 @@
                 }
                 alert('✅ ¡Producto actualizado correctamente!');
             } else {
-                // Inserir novo produto no Supabase
                 const { error } = await supabaseClient
                     .from('produtos')
                     .insert([{ codigo_barras, nome, preco, quantidade, categoria }]);
 
                 if (error) {
                     alert('Erro ao salvar produto no Supabase.');
-                    console.error(error);
                     return;
                 }
                 alert('✅ ¡Producto guardado correctamente!');
             }
 
             cancelarEdicao();
-            carregarProdutos();
+            carregarDados();
         });
         
         function abrirTab(tab) {
             document.getElementById('tabProductos').classList.toggle('activo', tab === 'productos');
-            document.getElementById('tabVentas').classList.toggle('activo', tab === 'ventas');
+            document.getElementById('tabInventario').classList.toggle('activo', tab === 'inventario');
+            document.getElementById('tabRelatorios').classList.toggle('activo', tab === 'relatorios');
+            
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('activo'));
-            if(tab === 'productos') document.querySelector('.tab-btn:first-child').classList.add('activo');
-            else document.querySelector('.tab-btn:last-child').classList.add('activo');
+            if(tab === 'productos') document.querySelector('.admin-tabs button:nth-child(1)').classList.add('activo');
+            else if(tab === 'inventario') document.querySelector('.admin-tabs button:nth-child(2)').classList.add('activo');
+            else document.querySelector('.admin-tabs button:nth-child(3)').classList.add('activo');
         }
     </script>
 </body>
